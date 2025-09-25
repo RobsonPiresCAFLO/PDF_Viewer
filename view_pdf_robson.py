@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 class PDFViewer:
     def __init__(self, root):
         self.root = root
-        # Sem barra de título, mas com redimensionamento
+        # Sem barra de título
         self.root.overrideredirect(True)
         self.root.geometry("1000x700+100+100")
         self.root.minsize(600, 400)
@@ -17,6 +17,10 @@ class PDFViewer:
         self._resizing = False
         self._resize_dir = None
         self.resize_border = 6
+
+        # Controle de maximizar/restaurar
+        self.is_maximized = False
+        self.last_geometry = self.root.geometry()
 
         # Área PDF com scroll
         self.canvas = tk.Canvas(root, bg="black")
@@ -55,9 +59,12 @@ class PDFViewer:
         self.lbl_results = tk.Label(self.toolbar, text="Ocorrências: 0", bg="gray20", fg="white")
         self.lbl_results.pack(pady=5, padx=10, fill="x")
         
-        # Salvar
+        # Botões adicionais
         btn_save = tk.Button(self.toolbar, text="💾 Salvar PDF", command=self.save_pdf)
         btn_save.pack(pady=5, padx=10, fill="x")
+
+        btn_max = tk.Button(self.toolbar, text="⛶ Maximizar/Restaurar", command=self.toggle_maximize)
+        btn_max.pack(pady=5, padx=10, fill="x")
 
         btn_exit = tk.Button(self.toolbar, text="❌ Sair", command=self.root.destroy)
         btn_exit.pack(pady=20, padx=10, fill="x")
@@ -88,8 +95,20 @@ class PDFViewer:
         self.root.bind("<ButtonPress-1>", self.start_move_resize)
         self.root.bind("<B1-Motion>", self.do_move_resize)
 
-    # --- Controle da janela ---
+    # --- Controle janela ---
+    def toggle_maximize(self):
+        if not self.is_maximized:
+            self.last_geometry = self.root.geometry()
+            sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
+            self.root.geometry(f"{sw}x{sh}+0+0")
+            self.is_maximized = True
+        else:
+            self.root.geometry(self.last_geometry)
+            self.is_maximized = False
+
     def start_move_resize(self, event):
+        if self.is_maximized:
+            return
         x, y = event.x_root - self.root.winfo_x(), event.y_root - self.root.winfo_y()
         w, h = self.root.winfo_width(), self.root.winfo_height()
         
@@ -106,6 +125,8 @@ class PDFViewer:
             self._offsetx, self._offsety = event.x, event.y
 
     def do_move_resize(self, event):
+        if self.is_maximized:
+            return
         if self._resizing:
             w, h = self.root.winfo_width(), self.root.winfo_height()
             x, y = self.root.winfo_x(), self.root.winfo_y()
