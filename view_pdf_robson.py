@@ -6,17 +6,11 @@ from PIL import Image, ImageTk
 class PDFViewer:
     def __init__(self, root):
         self.root = root
-        # Sem barra de título
-        self.root.overrideredirect(True)
+        # Mantém barra de título visível
+        self.root.title("Visualizador de PDF")
         self.root.geometry("1000x700+100+100")
         self.root.minsize(600, 400)
-
-        # Controle de movimento/redimensionamento
-        self._offsetx = 0
-        self._offsety = 0
-        self._resizing = False
-        self._resize_dir = None
-        self.resize_border = 6
+        self.root.resizable(True, True)
 
         # Controle de maximizar/restaurar
         self.is_maximized = False
@@ -85,15 +79,12 @@ class PDFViewer:
         self.root.bind("<Control-equal>", lambda e: self.change_zoom(1.2))  
         self.root.bind("<Escape>", lambda e: self.root.destroy())
         self.root.bind("<F3>", lambda e: self.search_text())
+        self.root.bind("<Control-m>", lambda e: self.toggle_maximize())
 
         # Scroll do mouse
         self.canvas.bind_all("<MouseWheel>", self.on_scroll)  
         self.canvas.bind_all("<Button-4>", self.on_scroll)   
         self.canvas.bind_all("<Button-5>", self.on_scroll)   
-
-        # Eventos janela
-        self.root.bind("<ButtonPress-1>", self.start_move_resize)
-        self.root.bind("<B1-Motion>", self.do_move_resize)
 
     # --- Controle janela ---
     def toggle_maximize(self):
@@ -105,50 +96,6 @@ class PDFViewer:
         else:
             self.root.geometry(self.last_geometry)
             self.is_maximized = False
-
-    def start_move_resize(self, event):
-        if self.is_maximized:
-            return
-        x, y = event.x_root - self.root.winfo_x(), event.y_root - self.root.winfo_y()
-        w, h = self.root.winfo_width(), self.root.winfo_height()
-        
-        if x <= self.resize_border:
-            self._resizing, self._resize_dir = True, "left"
-        elif x >= w - self.resize_border:
-            self._resizing, self._resize_dir = True, "right"
-        elif y <= self.resize_border:
-            self._resizing, self._resize_dir = True, "top"
-        elif y >= h - self.resize_border:
-            self._resizing, self._resize_dir = True, "bottom"
-        else:
-            self._resizing, self._resize_dir = False, None
-            self._offsetx, self._offsety = event.x, event.y
-
-    def do_move_resize(self, event):
-        if self.is_maximized:
-            return
-        if self._resizing:
-            w, h = self.root.winfo_width(), self.root.winfo_height()
-            x, y = self.root.winfo_x(), self.root.winfo_y()
-            
-            if self._resize_dir == "right":
-                self.root.geometry(f"{max(600, event.x)}x{h}+{x}+{y}")
-            elif self._resize_dir == "bottom":
-                self.root.geometry(f"{w}x{max(400, event.y)}+{x}+{y}")
-            elif self._resize_dir == "left":
-                new_x = event.x_root
-                new_w = w + (x - new_x)
-                if new_w >= 600:
-                    self.root.geometry(f"{new_w}x{h}+{new_x}+{y}")
-            elif self._resize_dir == "top":
-                new_y = event.y_root
-                new_h = h + (y - new_y)
-                if new_h >= 400:
-                    self.root.geometry(f"{w}x{new_h}+{x}+{new_y}")
-        else:
-            x = event.x_root - self._offsetx
-            y = event.y_root - self._offsety
-            self.root.geometry(f"+{x}+{y}")
 
     # --- PDF ---
     def open_pdf(self):
